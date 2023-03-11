@@ -1,0 +1,6 @@
+*.png
+__pycache__
+*.mp4
+*.log
+asdasd.py
+.vscode/*

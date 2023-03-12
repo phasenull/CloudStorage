@@ -69,7 +69,7 @@ class FileConverter():
 	def CONVERT_VIDEO_TO_BINARY(self, path: str) -> str:
 		to_return = ""
 		data = ""
-
+		
 		return to_return
 
 	@time_function

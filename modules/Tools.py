@@ -50,6 +50,8 @@ def convert_string_to_binary(string:str,chunk_size : int = 36_864,max_threads : 
 			for thread in live_threads:
 				thread.join()
 				live_threads.remove(thread)
+		for thread in live_threads:
+			thread.join()
 	return job_id,total_threads
 
 def convert_binary_group_to_string(list:list[str]) -> str:

@@ -23,7 +23,8 @@ class FileConverter():
 			shutil.rmtree("bin")
 		if os.path.exists(path):
 			shutil.rmtree(path)
-		os.remove("output.mp4")
+		if os.path.exists("output.mp4"):
+			os.remove("output.mp4")
 		print("CLEARED")
 		self.makedir()
 	def makedir(self):

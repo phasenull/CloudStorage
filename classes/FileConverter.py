@@ -1,21 +1,12 @@
 import modules.Tools as tools
+from modules.Tools import time_function
 import cv2
 import time
 import os
-import threading
 from PIL import Image, ImageDraw
-
-
-def time_function(func):
-	def inner1(*args, **kwargs):
-		start = time.time()
-		print(f"Started {func.__name__} at {start} ")
-		returned_value = func(*args, **kwargs)
-		print(f"Finished {func.__name__} in {time.time() - start} seconds")
-		return returned_value
-	return inner1
-
-
+import shutil
+import threading
+import multiprocessing
 class FileConverter():
 	def __init__(self, threads: int = 10, video_fps: int = 30, video_res: tuple[int, int] = (256, 144), images_folder: str = "images") -> None:
 		self.threads = threads
@@ -23,35 +14,54 @@ class FileConverter():
 		self.res = video_res
 		self.images_folder = images_folder
 		self.__chars_per_frame = self.res[0] * self.res[1]
-
-	def handle_frame(self, frame: int, frames: int, chunk: str):
+		self.clear()
+		print(f"Init with params: [threads={self.threads},fps={self.fps}],res={self.res},images_folder={self.images_folder}]")
+	def clear(self):
+		print("CLEARING")
+		path = self.images_folder
+		if os.path.exists("bin"):
+			shutil.rmtree("bin")
+		if os.path.exists(path):
+			shutil.rmtree(path)
+		print("CLEARED")
+		self.makedir()
+	def makedir(self):
+		os.mkdir("bin")
+		os.mkdir(self.images_folder)
+	def handle_frame(self, frame: int, frames: int, job_id: str):
+		chunk_id = f"{job_id}_{frame}.BINARY_CHUNK"
+		chunk_f = open(f"bin/{chunk_id}","r")
+		chunk = chunk_f.read()
+		chunk_f.close()
 		img = Image.new(mode="RGB", size=self.res, color=(0, 255, 0))
 		drawer = ImageDraw.Draw(img)
 		# print("CHUNK_LENGTH:",len(chunk))
+		chunk_len = len(chunk)
 		canvas = [0, 0]
-		for char_i in range(len(chunk)):
+		for char_i in range(chunk_len):
 			char = chunk[char_i]
 			color = char == "1" and (255, 255, 255) or (0, 0, 0)
-			# print(char, " | ", str(color))
 			drawer.point(canvas, color)
 			canvas[0] += 1
 			if (char_i + 1) % self.res[0] == 0:
 				canvas[0] = 0
 				canvas[1] += 1
 		canvas[0] = self.res[0]
-		print(f"{frame}\t({frames})\t{canvas[0]}\t{canvas[1]}")
+		#print(f"{frame}\t({frames})\t{canvas[0]}\t{canvas[1]}")
 		img.save(f"{self.images_folder}/frame_{frame+1}.png")
 		img.close()
 
 	@time_function
 	def CONVERT_FILE_TO_BINARY(self, file_path: str):
-		# test123w
 		file = open(file_path, "rb")
-		bytes = str(file.read())
+		bytes = str(file.read()).replace("\\x","/")
 		file.close()
-		binary = tools.convert_string_to_binary(bytes)
+		print("Finished Reading")
+		print("Started Converting To Binary")
+		job_id,job_length = tools.convert_string_to_binary(bytes,chunk_size=self.__chars_per_frame,max_threads=self.threads)
 		del bytes
-		return binary
+		del file
+		return job_id,job_length
 
 	@time_function
 	def CONVERT_VIDEO_TO_BINARY(self, path: str) -> str:
@@ -66,25 +76,30 @@ class FileConverter():
 		file = open(path_to_save, "wb")
 		string = tools.convert_binary_to_string(binary)
 		file.write(bytes(string, "utf-8"))
+		del string
 		file.close()
-		string = None
 		return binary
 	
 	@time_function
-	def CONVERT_BINARY_TO_VIDEO(self, binary: str, path_to_save:str):
+	def CONVERT_BINARY_TO_VIDEO(self, job_id : str, path_to_save:str,frames : int):
 		started_at = time.time()
-		frames = (len(binary) // self.__chars_per_frame) + \
-			(len(binary) % self.__chars_per_frame != 0 and 1 or 0)
-		print("Total Frames:", frames)
-		print(
-			f"Total Pixels : {len(binary)} ({self.__chars_per_frame} per frame)")
+		print("Total Frames:", {frames})
+		print(f"Total Pixels : {frames * self.__chars_per_frame} ({self.__chars_per_frame} per frame)")
 		threads = []
+		live_threads = []
+		thread_count = 0
 		for frame in range(frames):
-			chunk = binary[frame * self.__chars_per_frame: (frame+1)*self.__chars_per_frame]
-			thread = threading.Thread(target=self.handle_frame, args=[frame, frames, chunk])
-			threads.append(thread)
+			print(f"{frame}\t({frames})")
+			thread = multiprocessing.Process(target=self.handle_frame, args=[frame, frames, job_id])
 			thread.start()
-		for thread in threads:
+			live_threads.append(thread)
+			thread_count += 1
+			if thread_count % self.threads == 0:
+				print(f"THREAD LOCK {thread_count} / {frames}")
+				for thread in live_threads:
+					thread.join()
+					live_threads.remove(thread)
+		for thread in live_threads:
 			thread.join()
 		print(f"Finished Rendering in {int((time.time()-started_at)*100)/100}")
 		video_name = f'{path_to_save}'

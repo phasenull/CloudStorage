@@ -64,11 +64,46 @@ class FileConverter():
 		del bytes
 		del file
 		return job_id,job_length
+	def __handle_VtF_image(self,image_path,job_id):
+		image = Image.open(image_path)
+		canvas = [0,0]
+		for i in range(image.size[0] * image.size[1]):
+			
+			if canvas[0] % image.size[0] == 0:
+				canvas[0] = 0
+				canvas[1] += 1
 
 	@time_function
-	def CONVERT_VIDEO_TO_BINARY(self, path: str) -> str:
+	def CONVERT_VIDEO_TO_BINARY(self, input_video: str) -> str:
+		self.clear()
+		video = cv2.VideoCapture(input_video)
+		success,image = video.read()
+		i = 0
+		job_id = int(time.time())
+		while success:
+			cv2.imwrite(f"{self.images_folder}/V_F_{job_id}_{i}.png", image)
+			success, image = video.read()
+			i += 1
+		print(f"Rendered Video to File images ({i})")
+		images = sorted(os.listdir(self.images_folder))
+		images_len = len(images)
+		for path in images:
+			live_threads = []
+			thread_count = 0
+			print(f"{thread_count}\t({images_len})")
+			thread = multiprocessing.Process(target=self.__handle_VtF_image, args=[path, job_id])
+			thread.start()
+			live_threads.append(thread)
+			thread_count += 1
+			if thread_count % self.threads == 0:
+				print(f"THREAD LOCK {thread_count} / {images_len}")
+				for thread in live_threads:
+					thread.join()
+					live_threads.remove(thread)
+			for thread in live_threads:
+				thread.join()
+		# data = str(input_file.read()).replace("/","\\x")
 		to_return = ""
-		data = ""
 		
 		return to_return
 
@@ -87,7 +122,6 @@ class FileConverter():
 		started_at = time.time()
 		print("Total Frames:", {frames})
 		print(f"Total Pixels : {frames * self.__chars_per_frame} ({self.__chars_per_frame} per frame)")
-		threads = []
 		live_threads = []
 		thread_count = 0
 		for frame in range(frames):
@@ -110,11 +144,8 @@ class FileConverter():
 		images.sort()
 		frame = cv2.imread(os.path.join(self.images_folder, images[0]))
 		height, width, layers = frame.shape
-
 		video = cv2.VideoWriter(video_name, 0, self.fps, (width, height))
-
 		for image in images:
 			video.write(cv2.imread(os.path.join(self.images_folder, image)))
-
 		cv2.destroyAllWindows()
 		video.release()

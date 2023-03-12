@@ -17,6 +17,7 @@ def convert_string_to_binary(string:str):
 	chunk = []
 	for char in string:
 		chunk.append(convert_character_to_binary(char))
+		#memory leak somewhere here
 	return "".join([str(i) for i in chunk])
 
 def convert_binary_group_to_string(list:list[str]) -> str:

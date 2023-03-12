@@ -45,7 +45,7 @@ def convert_string_to_binary(string:str,chunk_size : int = 36_864,max_threads : 
 		thread.start()
 		live_threads.append(thread)
 		thread_count += 1
-		if total_threads % thread_count == 0:
+		if thread_count % max_threads == 0:
 			print(f"THREAD LOCK {thread_count} / {total_threads}")
 			for thread in live_threads:
 				thread.join()

@@ -6,3 +6,5 @@ asdasd.py
 .vscode/*
 .vscode
 *.BINARY_CHUNK
+*.txt
+input.*

@@ -14,11 +14,11 @@ def time_function(func):
 def __fit_to_bits(binary:str) -> str:
 	return "0"*(BITS-len(binary)) + binary
 
-def convert_character_to_binary(character: str) -> str:
+def CONVERT_CHARACTER_TO_BINARY(character: str) -> str:
 	return __fit_to_bits(bin(ord(character))[2:])
 
 
-def convert_binary_chunk_to_character(string: str) -> str:
+def __convert_binary_chunk_to_character(string: str) -> str:
 	ascii = 0
 	for i in range(len(string)):
 		ascii += int(string[-i-1])*(2**abs(i))
@@ -31,9 +31,9 @@ def save_binary_chunk(chunk_index : int, chunk : str,job_id):
 	file.close()
 
 def __handle_chunk(chunk_i : int,chunk_size : int,chunk : str,job_id : str):
-	save_binary_chunk(chunk_i,"".join([convert_character_to_binary(char) for char in chunk]),job_id)
+	save_binary_chunk(chunk_i,"".join([CONVERT_CHARACTER_TO_BINARY(char) for char in chunk]),job_id)
 @time_function
-def convert_string_to_binary(string:str,chunk_size : int = 36_864,max_threads : int = 10):
+def CONVERT_STRING_TO_BINARY(string:str,chunk_size : int = 36_864,max_threads : int = 10):
 	live_threads = []
 	thread_count = 0
 	string_length = len(string)
@@ -54,14 +54,12 @@ def convert_string_to_binary(string:str,chunk_size : int = 36_864,max_threads : 
 			thread.join()
 	return job_id,total_threads
 
-def convert_binary_group_to_string(list:list[str]) -> str:
-	string = ""
-	for i in list:
-		string += convert_binary_chunk_to_character(i)
+def __convert_binary_group_to_string(list:list[str]) -> str:
+	string = "".join([__convert_binary_chunk_to_character(i) for i in list])
 	return string
-def convert_binary_to_string(binary:str) -> str:
-	return convert_binary_group_to_string(split_binary_chunk(binary))
-def split_binary_chunk(string:str) -> list[str]:
+def CONVERT_BINARY_TO_STRING(binary:str) -> str:
+	return __convert_binary_group_to_string(__split_binary_chunk(binary))
+def __split_binary_chunk(string:str) -> list[str]:
 	chunk = []
 	for i in range(len(string) // BITS):
 		chunk.append(string[i*BITS : (i+1)*BITS])

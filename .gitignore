@@ -1,8 +1,8 @@
 *.png
 __pycache__
 *.log
-asdasd.py
-.vscode/*
 .vscode
 *.BINARY_CHUNK
+*.BYTE_CHUNK
+*.mp4
 *.txt
